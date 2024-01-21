@@ -62,8 +62,11 @@ class ReLU(Node):
 class SimpleDenseLayer:
     def __init__(self, input_size, output_size):
         # Initialize weights and biases
-        self.weights = np.random.randn(input_size, output_size)
+        # Using Xavier initialization
+        stddev = np.sqrt(2 / (input_size + output_size))
+        self.weights = np.random.normal(0, stddev, (input_size, output_size))
         self.biases = np.random.randn(output_size)
+
         self.matmul = MatMul()
         self.add = Add()
         self.relu = ReLU()
@@ -113,6 +116,12 @@ class NeuralNetwork:
         return x
     
     def backward_pass(self, output_gradient, learning_rate=0.01):
+        gradient_norm = np.linalg.norm(output_gradient)
+        max_norm = 5.0
+
+        if gradient_norm > max_norm:
+            output_gradient = output_gradient * max_norm / gradient_norm
+
         i = 0
         for layer in reversed(self.layers):
             print('here: ', i)
@@ -134,6 +143,7 @@ def compute_loss_and_gradient(predictions, targets):
     # derivative of loss function with resp. to predictions to get gradient
     loss_gradient = -(targets / predictions) + (1 - targets) / (1 - predictions)
     return loss, loss_gradient
+
 
 def train(network, data, targets, epochs, learning_rate, batch_size):
     for epoch in range(epochs):
@@ -169,4 +179,8 @@ with open('labels.txt', 'r') as file:
     training_targets = np.array([item.split(',') for item in [i.strip() for i in items]], dtype=float)
 
 training_targets += 1
-trained_nn = train(nn, training_data, training_targets, epochs=100, learning_rate=0.01, batch_size=32)
+# I noticed that a large epoch and larger training rate gives a lot of
+# NaNs and that the individual gradient elements were increasing in size.
+# I researched and found that this might be a phenomenon called "exploding gradients"
+# and applied some tuning and improvements to the loss function and weight randomization.
+trained_nn = train(nn, training_data, training_targets, epochs=10, learning_rate=0.0001, batch_size=32)
