@@ -39,7 +39,7 @@ class MatMul(Node):
             output_gradient = output_gradient.reshape(1, -1)
 
         input_gradient = np.dot(output_gradient, self.inputs[1].T)
-        weights_gradient = np.dot(self.inputs[0].reshape(1, -1).T, output_gradient)
+        weights_gradient = np.dot(self.inputs[0].T, output_gradient)
 
         # Ensure the gradients have the correct shape        
         if input_gradient.shape[0] == 1:
@@ -76,8 +76,9 @@ class SimpleDenseLayer:
     
     def backward(self, output_gradient, learning_rate):
         relu_gradient = self.relu.backward(output_gradient)
+        print(relu_gradient, output_gradient)
         add_gradient, biases_gradient = self.add.backward(relu_gradient)
-        print('add_gradient:', add_gradient)
+        print(add_gradient, biases_gradient)
         input_gradient, weights_gradient = self.matmul.backward(add_gradient)
 
         # Update weights and biases
@@ -126,6 +127,9 @@ def compute_loss_and_gradient(predictions, targets):
     This function utilizes binary cross-entropy loss for
     a classification problem.
     """
+    epsilon = 1e-7
+    predictions = np.clip(predictions, epsilon, 1 - epsilon)
+
     loss = -np.mean(targets * np.log(predictions) + (1 - targets) * np.log(1 - predictions))
     # derivative of loss function with resp. to predictions to get gradient
     loss_gradient = -(targets / predictions) + (1 - targets) / (1 - predictions)
